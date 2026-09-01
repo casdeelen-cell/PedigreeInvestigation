@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genetics Case Files — Pedigree Investigations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #e9dfc6;
+    --paper-light: #f8f2e2;
+    --paper-dark: #ddd0ac;
+    --ink: #2a241d;
+    --ink-soft: #5c5443;
+    --stamp-red: #9c3126;
+    --success: #4a6741;
+    --gold: #a9772f;
+    --teal: #24615c;
+    --line: rgba(42,36,29,0.28);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.35), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Lora', Georgia, serif;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  ::selection{ background: var(--gold); color:var(--paper-light); }
+
+  .wrap{ max-width: 1100px; margin: 0 auto; padding: 22px 18px 80px; }
+
+  header.top{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    padding-bottom:14px; margin-bottom:18px; border-bottom: 2px solid var(--ink);
+    flex-wrap:wrap;
+  }
+  header.top h1{
+    font-family:'Special Elite', monospace; font-size:1.35rem; margin:0; letter-spacing:0.5px;
+    font-weight:400;
+  }
+  header.top .sub{ font-size:0.85rem; color:var(--ink-soft); margin-top:2px; }
+  .field-notes-btn{
+    font-family:'Lora', serif; font-size:0.82rem; background:var(--paper-light);
+    border:1.5px solid var(--ink); color:var(--ink); padding:7px 13px; cursor:pointer;
+    border-radius:2px; white-space:nowrap;
+  }
+  .field-notes-btn:hover{ background:var(--gold); border-color:var(--gold); color:var(--paper-light); }
+  .header-actions{ display:flex; align-items:center; gap:10px; }
+  .score-badge{
+    font-family:'Special Elite', monospace; font-size:0.82rem; background:var(--ink);
+    color:var(--paper-light); padding:8px 14px; border-radius:2px; white-space:nowrap;
+    letter-spacing:0.3px;
+  }
+
+  /* progress tabs */
+  .progress{ display:flex; gap:8px; margin-bottom:26px; flex-wrap:wrap; }
+  .progress .tab{
+    flex:1 1 160px; font-family:'Special Elite', monospace; font-size:0.72rem;
+    padding:9px 10px; border:1.5px solid var(--line); color:var(--ink-soft);
+    background:var(--paper-light); text-align:center; border-radius:2px;
+  }
+  .progress .tab.active{ border-color:var(--ink); color:var(--ink); background:#fff8e8; }
+  .progress .tab.done{ border-color:var(--success); color:var(--success); }
+  .progress .tab.done::after{ content:' ✓'; }
+
+  /* generic card */
+  .card{
+    background:var(--paper-light); border:1.5px solid var(--ink);
+    padding:26px 26px; margin-bottom:22px; position:relative; border-radius:2px;
+    box-shadow: 4px 4px 0 rgba(42,36,29,0.08);
+  }
+  .card h2{ font-family:'Special Elite', monospace; font-weight:400; font-size:1.15rem; margin-top:0; }
+  .card p{ margin: 0 0 12px; max-width:62ch; }
+  .card p:last-child{ margin-bottom:0; }
+
+  button.primary{
+    font-family:'Special Elite', monospace; font-size:0.92rem; background:var(--ink);
+    color:var(--paper-light); border:none; padding:12px 22px; cursor:pointer;
+    border-radius:2px; letter-spacing:0.3px;
+  }
+  button.primary:hover{ background:var(--teal); }
+  button.primary:disabled{ opacity:0.4; cursor:default; }
+
+  button.secondary{
+    font-family:'Lora', serif; font-size:0.88rem; background:transparent;
+    color:var(--ink); border:1.5px solid var(--ink); padding:10px 18px; cursor:pointer;
+    border-radius:2px;
+  }
+  button.secondary:hover{ background:var(--ink); color:var(--paper-light); }
+
+  /* pedigree chart */
+  .chart-wrap{
+    background:var(--paper-light); border:1.5px solid var(--ink); padding:14px;
+    margin-bottom:18px; border-radius:2px; overflow-x:auto;
+  }
+  .pedigree-svg{ width:100%; height:auto; display:block; min-width:340px; }
+  .pedigree-svg .marriage-line, .pedigree-svg .drop-line,
+  .pedigree-svg .sibling-line, .pedigree-svg .stem-line{
+    stroke:var(--ink); stroke-width:2.5;
+  }
+  .pedigree-svg rect, .pedigree-svg circle{
+    stroke:var(--ink); stroke-width:3; fill:var(--paper-light); cursor:pointer;
+    transition: transform 0.12s ease;
+  }
+  .pedigree-svg .person.affected rect, .pedigree-svg .person.affected circle{
+    fill:var(--ink);
+  }
+  .pedigree-svg .person:hover rect, .pedigree-svg .person:hover circle{
+    stroke:var(--teal); stroke-width:4;
+  }
+  .pedigree-svg .person:focus rect, .pedigree-svg .person:focus circle{
+    outline:none; stroke:var(--gold); stroke-width:4.5;
+  }
+  .pedigree-svg .person.selected rect, .pedigree-svg .person.selected circle{
+    stroke:var(--stamp-red); stroke-width:4.5;
+  }
+  .pedigree-svg .id-label{
+    font-family:'Special Elite', monospace; font-size:11px; fill:var(--ink-soft);
+  }
+  .pedigree-svg .name-label{
+    font-family:'Lora', serif; font-size:12px; fill:var(--ink);
+  }
+  .pedigree-svg .gen-label{
+    font-family:'Special Elite', monospace; font-size:14px; fill:var(--ink-soft);
+  }
+
+  .legend-mini{
+    display:flex; gap:18px; flex-wrap:wrap; font-size:0.82rem; color:var(--ink-soft);
+    margin: 0 0 18px; padding: 10px 14px; border:1px dashed var(--line);
+  }
+  .legend-mini span{ display:inline-flex; align-items:center; gap:6px; }
+  .swatch{ width:16px; height:16px; border:2px solid var(--ink); display:inline-block; }
+  .swatch.circle{ border-radius:50%; }
+  .swatch.filled{ background:var(--ink); }
+
+  /* inspector */
+  .inspector{
+    border:1.5px dashed var(--ink-soft); padding:12px 16px; margin-bottom:18px;
+    font-size:0.88rem; background: repeating-linear-gradient(135deg, rgba(0,0,0,0.015) 0 10px, transparent 10px 20px);
+  }
+  .inspector .label{ font-family:'Special Elite', monospace; font-size:0.7rem; color:var(--ink-soft); }
+  .inspector .name{ font-size:1rem; margin:2px 0; }
+
+  /* question panel */
+  .qpanel{ background:var(--paper-light); border:1.5px solid var(--ink); padding:22px 24px; border-radius:2px; }
+  .qpanel .qprompt{ font-size:1.02rem; margin:0 0 16px; max-width:62ch; }
+  .options{ display:flex; flex-direction:column; gap:9px; margin-bottom:14px; }
+  .opt-btn{
+    text-align:left; font-family:'Lora', serif; font-size:0.94rem; padding:11px 15px;
+    background:#fff; border:1.5px solid var(--line); cursor:pointer; border-radius:2px;
+  }
+  .opt-btn:hover:not(:disabled){ border-color:var(--ink); }
+  .opt-btn:disabled{ cursor:default; }
+  .opt-btn.correct{ border-color:var(--success); background:#eef3ea; }
+  .opt-btn.wrong{ border-color:var(--stamp-red); background:#f7eae8; }
+
+  .click-hint{ font-style:italic; color:var(--ink-soft); font-size:0.88rem; margin-bottom:10px; }
+
+  .hints{ margin: 10px 0; padding:0; list-style:none; }
+  .hints li{
+    font-size:0.86rem; color:var(--ink-soft); padding:8px 12px; margin-bottom:6px;
+    border-left:3px solid var(--gold); background:#fbf6e9;
+  }
+
+  .feedback{ padding:12px 14px; margin: 10px 0 14px; border-radius:2px; font-size:0.92rem; }
+  .feedback.correct{ background:#eef3ea; border:1.5px solid var(--success); color:#33472c; }
+  .feedback.revealed{ background:#fbf3e4; border:1.5px solid var(--gold); color:#5c4318; }
+  .feedback .tag{ font-family:'Special Elite', monospace; font-size:0.75rem; display:block; margin-bottom:4px; }
+
+  /* solved / stamp */
+  .stamp{
+    display:inline-block; font-family:'Special Elite', monospace; color:var(--stamp-red);
+    border:4px solid var(--stamp-red); padding:8px 20px; font-size:1.3rem; text-transform:uppercase;
+    transform: rotate(-4deg); letter-spacing:2px; border-radius:6px; opacity:0;
+    animation: stampIn 0.4s ease-out 0.15s forwards;
+  }
+  @keyframes stampIn{
+    0%{ opacity:0; transform: rotate(-4deg) scale(2.2); }
+    70%{ opacity:1; }
+    100%{ opacity:1; transform: rotate(-4deg) scale(1); }
+  }
+  .verdict-box{ text-align:center; margin: 6px 0 22px; }
+  .verdict-text{ font-size:1.15rem; margin-top:16px; }
+  .evidence-list{ padding-left:1.2em; }
+  .evidence-list li{ margin-bottom:8px; }
+
+  /* field notes drawer */
+  .drawer-backdrop{
+    position:fixed; inset:0; background:rgba(20,17,12,0.45); z-index:40;
+    display:none;
+  }
+  .drawer-backdrop.open{ display:block; }
+  .drawer{
+    position:fixed; top:0; right:0; height:100%; width:min(380px,90vw);
+    background:var(--paper-light); border-left:2px solid var(--ink); z-index:41;
+    transform: translateX(100%); transition: transform 0.25s ease; padding:24px;
+    overflow-y:auto;
+  }
+  .drawer.open{ transform: translateX(0); }
+  .drawer h3{ font-family:'Special Elite', monospace; font-weight:400; font-size:1.05rem; }
+  .drawer .close-btn{
+    position:absolute; top:16px; right:16px; background:none; border:none; font-size:1.3rem;
+    cursor:pointer; color:var(--ink);
+  }
+  .drawer dl{ margin:0; }
+  .drawer dt{ font-family:'Special Elite', monospace; font-size:0.78rem; color:var(--ink-soft); margin-top:16px; }
+  .drawer dd{ margin:4px 0 0; }
+  .mini-legend-row{ display:flex; align-items:center; gap:10px; margin:8px 0; font-size:0.9rem; }
+
+  .landing-hero{ text-align:center; padding: 30px 10px 10px; }
+  .landing-hero h2{ font-family:'Special Elite', monospace; font-weight:400; font-size:1.6rem; margin-bottom:6px; }
+  .landing-hero p{ max-width:52ch; margin:0 auto 22px; color:var(--ink-soft); }
+  .case-list{ display:flex; flex-direction:column; gap:10px; text-align:left; max-width:480px; margin: 0 auto 24px; }
+  .case-list .item{ border:1px solid var(--line); padding:12px 16px; font-size:0.92rem; }
+  .case-list .item b{ display:block; font-family:'Special Elite', monospace; font-weight:400; font-size:0.85rem; color:var(--teal); margin-bottom:2px;}
+
+  .cheatsheet{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width:560px){ .cheatsheet{ grid-template-columns: 1fr; } }
+  .cheatsheet .col{ border:1px solid var(--line); padding:14px 16px; }
+  .cheatsheet h4{ font-family:'Special Elite', monospace; font-weight:400; font-size:0.9rem; margin-top:0; }
+  .cheatsheet ul{ margin:0; padding-left:1.1em; font-size:0.88rem; }
+  .cheatsheet ul li{ margin-bottom:6px; }
+
+  .nav-row{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+
+  /* side-by-side case layout: pedigree on the left, questions on the right */
+  .case-body{
+    display:grid; grid-template-columns: minmax(300px, 480px) 1fr;
+    gap:20px; align-items:start;
+  }
+  .case-left{ position:sticky; top:16px; }
+  .case-right{ position:sticky; top:16px; }
+  @media (max-width: 860px){
+    .case-body{ grid-template-columns: 1fr; }
+    .case-left, .case-right{ position:static; }
+  }
+
+  /* point system */
+  .points-earned{
+    display:inline-block; font-family:'Special Elite', monospace; font-size:0.78rem;
+    color:var(--success); margin-left:8px;
+  }
+  .score-summary{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    background:var(--paper-dark); border:1.5px solid var(--ink); padding:14px 18px;
+    margin-bottom:18px; border-radius:2px;
+  }
+  .score-summary .big{ font-family:'Special Elite', monospace; font-size:1.3rem; }
+  .leaderboard-form{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; }
+  .leaderboard-form input{
+    font-family:'Lora', serif; font-size:0.92rem; padding:9px 12px; border:1.5px solid var(--ink);
+    border-radius:2px; background:#fff; flex:1 1 180px;
+  }
+  .leaderboard-note{ font-size:0.78rem; color:var(--ink-soft); margin: 4px 0 0; }
+  table.leaderboard{ width:100%; border-collapse:collapse; margin-top:10px; font-size:0.92rem; }
+  table.leaderboard th{
+    text-align:left; font-family:'Special Elite', monospace; font-size:0.75rem; color:var(--ink-soft);
+    border-bottom:1.5px solid var(--ink); padding:6px 8px;
+  }
+  table.leaderboard td{ padding:7px 8px; border-bottom:1px solid var(--line); }
+  table.leaderboard tr.you{ background:#fbf3e4; }
+  table.leaderboard td.rank{ font-family:'Special Elite', monospace; color:var(--ink-soft); }
+
+  /* punnett square */
+  table.punnett{ border-collapse:collapse; margin:12px 0; font-family:'Special Elite', monospace; font-size:0.85rem; }
+  table.punnett th, table.punnett td{ border:1.5px solid var(--ink); padding:9px 14px; text-align:center; }
+  table.punnett th{ background:var(--paper-dark); }
+  table.punnett td{ background:#fff; }
+
+  /* open-answer question */
+  .open-answer{
+    width:100%; font-family:'Lora', serif; font-size:0.92rem; padding:11px 13px;
+    border:1.5px solid var(--line); border-radius:2px; resize:vertical; margin-bottom:12px;
+    background:#fff;
+  }
+  .open-answer:focus{ outline:none; border-color:var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer">
+  <button class="close-btn" id="closeDrawer" aria-label="Close field notes">&times;</button>
+  <h3>Field Notes: Reading a Pedigree</h3>
+  <dl>
+    <dt>Shapes</dt>
+    <dd>
+      <div class="mini-legend-row"><span class="swatch"></span> Square = male</div>
+      <div class="mini-legend-row"><span class="swatch circle"></span> Circle = female</div>
+    </dd>
+    <dt>Shading</dt>
+    <dd>
+      <div class="mini-legend-row"><span class="swatch filled"></span> Filled / colored = affected (shows the trait)</div>
+      <div class="mini-legend-row"><span class="swatch"></span> Unfilled = unaffected</div>
+    </dd>
+    <dt>Marriage / mating line</dt>
+    <dd>A horizontal line connecting two individuals means they are partners who had children together.</dd>
+    <dt>Offspring line</dt>
+    <dd>A vertical line dropping from a couple down to a horizontal "sibling line," with stems to each child, connects parents to their children.</dd>
+    <dt>Generations</dt>
+    <dd>Roman numerals (I, II, III...) on the left label each generation, oldest at the top. Individuals within a generation are numbered left to right (I-1, I-2...).</dd>
+  </dl>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Genetics Case Files</h1>
+      <div class="sub">Pedigree Investigations — Detective Training Unit</div>
+    </div>
+    <div class="header-actions">
+      <div class="score-badge" id="scoreBadge">★ 0 pts</div>
+      <button class="field-notes-btn" id="fieldNotesBtn">Field Notes</button>
+    </div>
+  </header>
+
+  <div class="progress" id="progressBar"></div>
+
+  <main id="app"></main>
+</div>
+
+<script>
+(function(){
+
+/* ---------------------------------------------------------
+   DATA
+--------------------------------------------------------- */
+
+const TUTORIAL_DIAGRAM = {
+  width: 400, height: 320, genLabelX: null,
+  individuals: [
+    {id:'T-1', name:'Alex', x:140, y:70, sex:'M', affected:false},
+    {id:'T-2', name:'Priya', x:260, y:70, sex:'F', affected:true},
+    {id:'T-3', name:'Ravi', x:200, y:270, sex:'M', affected:false}
+  ],
+  unions: [
+    {parents:['T-1','T-2'], children:['T-3']}
+  ],
+  genLabels: []
+};
+
+const TUTORIAL_QUESTIONS = [
+  { id:'t1', type:'mcq',
+    prompt:"Which shape represents a MALE individual in a pedigree chart?",
+    options:['Circle','Square','Triangle','Star'], correct:1,
+    hints:[
+      "Look at Alex (T-1) and Ravi (T-3) in the diagram above — what shape are they drawn as?",
+      "Both males in the diagram are drawn with straight corners, not curves."
+    ],
+    reveal:"Square = male. Every male in a pedigree is drawn as a square, no matter his age or generation."
+  },
+  { id:'t2', type:'mcq',
+    prompt:"Which shape represents a FEMALE individual?",
+    options:['Circle','Square','Triangle','Star'], correct:0,
+    hints:[
+      "Look at Priya (T-2) — she's drawn differently from Alex and Ravi.",
+      "Priya's shape has no corners at all."
+    ],
+    reveal:"Circle = female. Every female in a pedigree is drawn as a circle."
+  },
+  { id:'t3', type:'mcq',
+    prompt:"Priya (T-2) is drawn as a solid, filled-in circle, while Alex and Ravi are unfilled. What does a filled-in shape usually mean?",
+    options:['This person is the oldest','This person shows the trait being studied (is affected)','This person is married','This person has no children'], correct:1,
+    hints:[
+      "This isn't about age or family role — it's about a visible trait.",
+      "A filled shape flags someone who displays the characteristic the pedigree is tracking."
+    ],
+    reveal:"Filled / colored = affected (shows the trait). Unfilled = unaffected (doesn't show it)."
+  },
+  { id:'t4', type:'mcq',
+    prompt:"What does the horizontal line connecting Alex (T-1) and Priya (T-2) mean?",
+    options:['They are siblings','They are a couple who had children together','They live in the same house','They are the same age'], correct:1,
+    hints:[
+      "This line connects two people joining from different families, not two people from the same family.",
+      "It's often called a marriage line, or mating line."
+    ],
+    reveal:"A horizontal line joining two individuals is a marriage (mating) line — it connects partners."
+  },
+  { id:'t5', type:'mcq',
+    prompt:"What does the line going down from Alex and Priya to Ravi (T-3) represent?",
+    options:['A property boundary','A parent-to-child (offspring) connection','A timeline','A rivalry'], correct:1,
+    hints:[
+      "Follow the line — whose names does it connect, and in what direction does it go?",
+      "It links a couple down to the child they produced together."
+    ],
+    reveal:"A vertical line dropping from a couple to a child is an offspring line — it shows who that child's parents are."
+  }
+];
+
+const CASES = [
+  {
+    id:'case1', tabLabel:'Case 1', tabName:'The Winters File', hasTutorial:true,
+    trait:'Glimmerskin',
+    intro:{
+      title:'The Winters File',
+      body:[
+        "Welcome to the Genetics Detective Agency. Your first case: the Winters family has a mysterious trait called Glimmerskin — their skin faintly shimmers under bright light, and nobody agrees on how it runs in the family.",
+        "Your job is to read the evidence in their pedigree chart and work out whether Glimmerskin is caused by a dominant allele or a recessive allele. Before you open the file, you'll need to brush up on how to read the chart itself."
+      ],
+      cta:'Begin Field Training'
+    },
+    chart:{
+      width:560, height:520, genLabelX:14,
+      individuals:[
+        {id:'I-1', name:'Otto', x:260, y:70, sex:'M', affected:false},
+        {id:'I-2', name:'Freya', x:380, y:70, sex:'F', affected:false},
+        {id:'II-1', name:'Marla', x:140, y:270, sex:'F', affected:true},
+        {id:'II-2', name:'Peter', x:260, y:270, sex:'M', affected:false},
+        {id:'II-3', name:'Dana', x:380, y:270, sex:'F', affected:false},
+        {id:'II-4', name:'Cole', x:40, y:270, sex:'M', affected:false},
+        {id:'II-5', name:'Rory', x:480, y:270, sex:'M', affected:false},
+        {id:'III-1', name:'Sam', x:40, y:470, sex:'M', affected:true},
+        {id:'III-2', name:'Ivy', x:140, y:470, sex:'F', affected:false},
+        {id:'III-3', name:'Theo', x:380, y:470, sex:'M', affected:true},
+        {id:'III-4', name:'Nora', x:480, y:470, sex:'F', affected:false}
+      ],
+      unions:[
+        {parents:['I-1','I-2'], children:['II-1','II-2','II-3']},
+        {parents:['II-1','II-4'], children:['III-1','III-2']},
+        {parents:['II-3','II-5'], children:['III-3','III-4']}
+      ],
+      genLabels:[{roman:'I',y:70},{roman:'II',y:270},{roman:'III',y:470}]
+    },
+    questions:[
+      { id:'q1', type:'mcq',
+        prompt:"How many generations does the Winters pedigree show?",
+        options:['2','3','4','5'], correct:1,
+        hints:["Check the Roman numerals running down the left edge of the chart.","Count the rows: I, II, III — that's your total."],
+        reveal:"3 generations — labeled I, II, and III from oldest to youngest."
+      },
+      { id:'q2', type:'click',
+        prompt:"Click on Otto's (I-1) spouse.",
+        expected:'I-2',
+        hints:["Look for the person connected to Otto by a horizontal line — that's the marriage line.","She's labeled I-2 on the chart. Click directly on her shape."],
+        reveal:"That's Freya (I-2) — connected to Otto by the marriage line."
+      },
+      { id:'q3', type:'mcq',
+        prompt:"Is Marla (II-1) affected by Glimmerskin?",
+        options:['Yes','No','Cannot tell from the chart'], correct:0,
+        hints:["Check whether Marla's circle is filled in or empty.","A filled shape means affected."],
+        reveal:"Yes — Marla's circle is filled in, so she's affected by Glimmerskin."
+      },
+      { id:'q4', type:'mcq',
+        prompt:"Otto (I-1) and Freya (I-2) are both unaffected, yet their daughter Marla (II-1) is affected. What does this tell you about the Glimmerskin allele?",
+        options:["It must be dominant — the trait appeared from nowhere","It must be recessive — both unaffected parents are silently carrying the allele","This pedigree must be drawn incorrectly","It could be either dominant or recessive — not enough evidence"], correct:1,
+        hints:[
+          "If Glimmerskin were dominant, could two people who show no sign of the trait produce a child who does?",
+          "For a dominant trait, at least one parent normally has to show the trait themselves to pass it on. Neither Otto nor Freya do — yet Marla is affected."
+        ],
+        reveal:"Recessive. Otto and Freya are both unaffected carriers. Two carriers can each pass along a hidden recessive allele, and if a child inherits one from each parent, that child is affected — even though neither parent showed the trait."
+      },
+      { id:'q5', type:'mcq',
+        prompt:"Marla (II-1, affected) and Cole (II-4, unaffected) have two children: Sam (III-1, affected) and Ivy (III-2, unaffected). Does this match what we'd expect for a recessive trait?",
+        options:['Yes','No','Not enough information'], correct:0,
+        hints:[
+          "If Marla's genotype is 'aa' and Cole is secretly a carrier 'Aa', what combinations could their kids inherit?",
+          "An 'aa' x 'Aa' cross gives roughly half aa (affected) and half Aa (unaffected carrier) children."
+        ],
+        reveal:"Yes, this fits perfectly. Marla (aa) x Cole (Aa, a hidden carrier) produces roughly 50% affected (aa) and 50% unaffected-but-carrier (Aa) children, matching Sam and Ivy."
+      },
+      { id:'q6', type:'mcq',
+        prompt:"Dana (II-3) and Rory (II-5) are both unaffected, but their son Theo (III-3) is affected. If Dana and Rory have another child, what's the probability that child is also affected?",
+        options:['0%','25%','50%','75%'], correct:1,
+        hints:[
+          "Since Theo is affected (aa) and both his parents are unaffected, what must both Dana's and Rory's genotypes be?",
+          "Both must be carriers: Aa x Aa. Try sketching a Punnett square with A and a from each parent."
+        ],
+        reveal:"25%. Aa x Aa produces AA, Aa, Aa, aa — only 1 of those 4 combinations (aa) is affected, so there's a 1-in-4 chance."
+      }
+    ],
+    solved:{
+      verdict:"Glimmerskin is an AUTOSOMAL RECESSIVE trait.",
+      evidence:[
+        "Two unaffected parents (Otto & Freya) had an affected child (Marla) — impossible for a straightforward dominant trait.",
+        "Affected people (like Marla) can still have unaffected children, when their partner isn't a carrier of the same allele.",
+        "The trait shows up in roughly equal numbers of males and females, consistent with an autosomal (non-sex-linked) gene."
+      ]
+    }
+  },
+  {
+    id:'case2', tabLabel:'Case 2', tabName:'Sparkle Freckles', hasTutorial:false,
+    trait:'Sparkle Freckles',
+    intro:{
+      title:'The Hart Family',
+      body:[
+        "Second case, fresh evidence. The Hart family has a trait called Sparkle Freckles. This one moves through the family very differently from Glimmerskin — see if you can spot the pattern quickly."
+      ],
+      cta:'Open the case file'
+    },
+    chart:{
+      width:400, height:330, genLabelX:12,
+      individuals:[
+        {id:'I-1', name:'Max', x:140, y:70, sex:'M', affected:true},
+        {id:'I-2', name:'Elena', x:260, y:70, sex:'F', affected:false},
+        {id:'II-1', name:'Wren', x:80, y:270, sex:'F', affected:true},
+        {id:'II-2', name:'Jack', x:200, y:270, sex:'M', affected:false},
+        {id:'II-3', name:'Leo', x:320, y:270, sex:'M', affected:true}
+      ],
+      unions:[
+        {parents:['I-1','I-2'], children:['II-1','II-2','II-3']}
+      ],
+      genLabels:[{roman:'I',y:70},{roman:'II',y:270}]
+    },
+    questions:[
+      { id:'q1', type:'mcq',
+        prompt:"Every person with Sparkle Freckles in this family has at least one affected parent. How is this different from the Winters case?",
+        options:["It's not different at all","In the Winters case, unaffected parents had an affected child — here, that never happens","This chart just has more generations","This chart has more females than males"], correct:1,
+        hints:[
+          "Compare: in the Winters pedigree, two unaffected parents produced an affected child. Does that happen anywhere here?",
+          "Here, every affected child traces straight back to an affected parent — no hidden carriers needed."
+        ],
+        reveal:"Right — here, every affected child has an affected parent, with no skipping. That pattern points to a dominant allele."
+      },
+      { id:'q2', type:'mcq',
+        prompt:"Elena (I-2) is unaffected. If F = the Sparkle Freckles allele (dominant) and f = no freckles, what must Elena's genotype be?",
+        options:['FF','Ff','ff','Cannot tell'], correct:2,
+        hints:[
+          "For a dominant trait, which genotypes actually show the trait — FF, Ff, or both?",
+          "If Elena carried even one F, she would show freckles. Since she shows none..."
+        ],
+        reveal:"ff. Since F is dominant, anyone with even one F allele (FF or Ff) would show freckles. Elena shows none, so she must be ff."
+      },
+      { id:'q3', type:'mcq',
+        prompt:"Max (I-1) is affected, and about half of his children with Elena (ff) are affected, half are not. What's the most likely genotype for Max?",
+        options:['FF','Ff','ff'], correct:1,
+        hints:[
+          "If Max were FF, could any of his children with an ff partner end up unaffected?",
+          "FF x ff would give 100% Ff children (all affected) — but we're seeing roughly a 50/50 split instead."
+        ],
+        reveal:"Ff. A heterozygous Ff x ff cross gives about 50% Ff (affected) and 50% ff (unaffected) children — exactly what we see with Wren, Jack, and Leo."
+      }
+    ],
+    solved:{
+      verdict:"Sparkle Freckles is an AUTOSOMAL DOMINANT trait.",
+      evidence:[
+        "Every affected person has at least one affected parent — the trait never skips a generation.",
+        "An affected heterozygote (Ff) crossed with an unaffected partner (ff) produces roughly a 50/50 split of affected to unaffected children.",
+        "Unlike Glimmerskin, this trait never hides in unaffected carriers — if you have the allele, you show it."
+      ]
+    }
+  },
+  {
+    id:'case3', tabLabel:'Case 3', tabName:'The Lucky Curl', hasTutorial:false,
+    trait:'Lucky Curl',
+    intro:{
+      title:'The Reyes Family',
+      body:[
+        "Final case. The Reyes family trait, nicknamed \"Lucky Curl,\" seems to vanish for generations before suddenly reappearing. Figure out how it's inherited."
+      ],
+      cta:'Open the case file'
+    },
+    chart:{
+      width:400, height:520, genLabelX:12,
+      individuals:[
+        {id:'I-1', name:'Hugo', x:140, y:70, sex:'M', affected:false},
+        {id:'I-2', name:'Ana', x:260, y:70, sex:'F', affected:false},
+        {id:'II-1', name:'Bea', x:200, y:270, sex:'F', affected:false},
+        {id:'II-2', name:'Sam', x:320, y:270, sex:'M', affected:false},
+        {id:'III-1', name:'Milo', x:260, y:470, sex:'M', affected:true}
+      ],
+      unions:[
+        {parents:['I-1','I-2'], children:['II-1']},
+        {parents:['II-1','II-2'], children:['III-1']}
+      ],
+      genLabels:[{roman:'I',y:70},{roman:'II',y:270},{roman:'III',y:470}]
+    },
+    questions:[
+      { id:'q1', type:'mcq',
+        prompt:"Nobody in Generations I or II of the Reyes family shows Lucky Curl — but Milo (III-1) in Generation III has it. What does this pattern suggest?",
+        options:['Dominant','Recessive'], correct:1,
+        hints:[
+          "Could a dominant trait stay completely invisible for two whole generations if someone carried the allele? (With dominant traits, having the allele means showing it.)",
+          "Recessive alleles can be quietly carried by unaffected people for generations before two carriers happen to have a child together."
+        ],
+        reveal:"Recessive. The trait was hidden in unaffected carriers for two generations, until Bea and Sam — both carriers — had Milo."
+      },
+      { id:'q2', type:'mcq',
+        prompt:"For Milo to be affected (genotype cc), what must BOTH of his parents, Bea (II-1) and Sam (II-2), be — even though neither shows the trait?",
+        options:['Both CC','Both unaffected carriers (Cc)','One CC and one cc','Impossible to know'], correct:1,
+        hints:[
+          "Milo needed one 'c' allele from each parent. If neither parent shows the trait, what must their other allele be?",
+          "Both Bea and Sam must be Cc — unaffected, but each secretly carrying one copy of the recessive allele."
+        ],
+        reveal:"Both are Cc (unaffected carriers). Cc x Cc gives a 25% chance of a cc (affected) child like Milo, even though neither parent shows Lucky Curl."
+      }
+    ],
+    solved:{
+      verdict:"Lucky Curl is an AUTOSOMAL RECESSIVE trait.",
+      evidence:[
+        "The trait skipped two entire generations before reappearing — a hallmark of recessive inheritance.",
+        "Two unaffected parents (Bea & Sam) produced an affected child (Milo), which a simple dominant trait cannot explain.",
+        "Recessive alleles can travel silently through a family for generations, hidden inside unaffected carriers."
+      ]
+    }
+  },
+  {
+    id:'case4', tabLabel:'Case 4', tabName:'The Bellweather File', hasTutorial:false,
+    trait:'Silver Static',
+    intro:{
+      title:'The Bellweather Family',
+      body:[
+        "Final case, and the toughest one yet. The Bellweather family trait, \"Silver Static,\" runs through three generations. This time you won't just be labeling dominant or recessive — you'll need to work out actual genotypes and use Punnett squares to predict odds.",
+        "A few questions will ask you to type your own reasoning instead of picking from a list. Nobody's grading those but you — read the model answer afterward and be honest about whether you nailed it."
+      ],
+      cta:'Open the case file'
+    },
+    chart:{
+      width:560, height:520, genLabelX:14,
+      individuals:[
+        {id:'I-1', name:'Frank', x:260, y:70, sex:'M', affected:false},
+        {id:'I-2', name:'Greta', x:380, y:70, sex:'F', affected:true},
+        {id:'II-1', name:'Owen', x:120, y:270, sex:'M', affected:true},
+        {id:'II-2', name:'Mira', x:260, y:270, sex:'F', affected:false},
+        {id:'II-3', name:'Dez', x:380, y:270, sex:'M', affected:true},
+        {id:'II-4', name:'Kit', x:40, y:270, sex:'F', affected:false},
+        {id:'II-5', name:'Poppy', x:480, y:270, sex:'F', affected:true},
+        {id:'III-1', name:'Sable', x:40, y:470, sex:'F', affected:true},
+        {id:'III-2', name:'Wynn', x:120, y:470, sex:'M', affected:false},
+        {id:'III-3', name:'Ruell', x:380, y:470, sex:'M', affected:false},
+        {id:'III-4', name:'Ash', x:480, y:470, sex:'F', affected:true}
+      ],
+      unions:[
+        {parents:['I-1','I-2'], children:['II-1','II-2','II-3']},
+        {parents:['II-1','II-4'], children:['III-1','III-2']},
+        {parents:['II-3','II-5'], children:['III-3','III-4']}
+      ],
+      genLabels:[{roman:'I',y:70},{roman:'II',y:270},{roman:'III',y:470}]
+    },
+    questions:[
+      { id:'q1', type:'mcq',
+        prompt:"Every affected person in this pedigree traces back to an affected parent, AND two affected parents — Dez (II-3) and Poppy (II-5) — had an unaffected son, Ruell (III-3). Taken together, what does this tell you about Silver Static?",
+        options:['It must be recessive — the trait skipped a generation','It must be dominant — two affected heterozygous parents can still have an unaffected child','Not enough information to tell','It must be sex-linked'], correct:1,
+        hints:[
+          "If Silver Static were recessive, affected people would be homozygous (ss). Could two ss parents ever produce an unaffected child?",
+          "Two affected recessive parents (ss × ss) can ONLY produce affected (ss) children — never an unaffected one. Since Ruell is unaffected, that rules recessive out."
+        ],
+        reveal:"Dominant. If the trait were recessive, affected parents (ss × ss) could never produce an unaffected child — but Ruell is proof that they can, which only works if Dez and Poppy are heterozygous carriers of a dominant allele."
+      },
+      { id:'q2', type:'click',
+        prompt:"Click on Mira (II-2) — the one child of Frank and Greta who is unaffected.",
+        expected:'II-2',
+        hints:["She's one of the three children in Generation II.","Look for the unfilled circle among Frank and Greta's kids."],
+        reveal:"That's Mira (II-2) — unaffected, unlike her brothers Owen and Dez."
+      },
+      { id:'q3', type:'mcq',
+        prompt:"Let S = the dominant Silver Static allele, and s = the normal recessive allele. Frank (I-1) is unaffected, so he must be ss. Greta (I-2) is affected — but is she SS or Ss? Use Mira (II-2) to decide.",
+        options:['SS — an affected parent must be homozygous','Ss — if Greta were SS, every child would inherit an S and be affected, but Mira is unaffected','Cannot be determined from this chart','ss — Greta can\'t actually be affected'], correct:1,
+        hints:[
+          "If Greta were SS, what genotype would EVERY one of her children have, guaranteed?",
+          "SS × ss always gives 100% Ss (affected) children. Since Mira is unaffected, Greta can't be SS."
+        ],
+        reveal:"Ss. If Greta were SS, all her children would receive at least one S and be affected — but Mira is unaffected (ss), so Greta must be heterozygous (Ss)."
+      },
+      { id:'q4', type:'open',
+        prompt:"Owen (II-1) is affected, and his father Frank (I-1) is ss. What is Owen's genotype, and how do you know? Type your reasoning, then reveal the model answer.",
+        reveal:"Owen must be Ss. He received one allele from each parent — since his father Frank is ss, Owen's allele from Frank has to be 's'. For Owen to be affected, his other allele (from Greta) must be 'S'. That makes him Ss: heterozygous, but affected because S is dominant."
+      },
+      { id:'q5', type:'mcq',
+        prompt:`Owen (Ss) has children with Kit, who is unaffected (ss). Here's the Punnett square for that cross:<br>
+          <table class="punnett"><tr><th></th><th>S</th><th>s</th></tr><tr><th>s</th><td>Ss</td><td>ss</td></tr><tr><th>s</th><td>Ss</td><td>ss</td></tr></table>
+          Based on this square, what fraction of Owen and Kit's children should be affected?`,
+        options:['0%','25%','50%','100%'], correct:2,
+        hints:[
+          "Count the boxes in the square: how many contain at least one S (affected), out of the total 4 boxes?",
+          "Two of the four boxes are Ss (affected), two are ss (unaffected) — that's a 2-in-4 ratio."
+        ],
+        reveal:"50%. The Ss × ss cross gives 2 Ss (affected) : 2 ss (unaffected) — a 1:1 ratio. That matches what we see: Sable is affected, Wynn is not."
+      },
+      { id:'q6', type:'open',
+        prompt:"Dez (II-3) is affected, and — like Owen — his father Frank is ss, so Dez must also be Ss. His partner Poppy (II-5) is affected too, but we don't automatically know if she's SS or Ss. Their son Ruell (III-3) is unaffected. What must Poppy's genotype be, and why?",
+        reveal:"Poppy must be Ss. Dez is Ss, so he can contribute either S or s to a child. For Ruell to end up unaffected (ss), he needs an 's' from BOTH parents — which means Poppy must also carry an 's' allele. Since Poppy is affected, her other allele must be S. So Poppy is Ss, just like Dez."
+      },
+      { id:'q7', type:'mcq',
+        prompt:`Now that we know Dez is Ss and Poppy is Ss, here's their Punnett square:<br>
+          <table class="punnett"><tr><th></th><th>S</th><th>s</th></tr><tr><th>S</th><td>SS</td><td>Ss</td></tr><tr><th>s</th><td>Ss</td><td>ss</td></tr></table>
+          What fraction of Dez and Poppy's children should be UNAFFECTED?`,
+        options:['0%','25%','50%','75%'], correct:1,
+        hints:[
+          "Only one combination in the square lacks any S allele at all — find it.",
+          "Only the 'ss' box (bottom-right) is unaffected — that's 1 out of 4 boxes."
+        ],
+        reveal:"25%. An Ss × Ss cross gives a classic 3:1 ratio — 1 SS, 2 Ss (both affected, 75% total), and 1 ss (unaffected, 25%). Ruell landed in that 25% slice."
+      },
+      { id:'q8', type:'mcq',
+        prompt:"Phenotype vs. genotype check: just by looking at the pedigree chart (without doing any of the reasoning above), can you tell whether Poppy (II-5) is SS or Ss?",
+        options:['Yes, filled circles are always Ss','Yes, filled circles are always SS','No — the chart only shows phenotype (affected/unaffected); genotype has to be worked out from the children she produces','No — genotype can never be determined for anyone in any pedigree'], correct:2,
+        hints:[
+          "A pedigree chart's shapes (filled vs. unfilled) show whether someone visibly HAS the trait — that's phenotype, not genotype.",
+          "We only figured out Poppy was Ss by reasoning through Ruell's phenotype — the chart alone never states genotypes directly."
+        ],
+        reveal:"No — a pedigree only shows phenotype directly (filled = shows the trait). Genotype (SS vs. Ss for a dominant trait) has to be inferred from evidence, like the phenotypes of someone's children — exactly how we figured out both Greta's and Poppy's genotypes."
+      },
+      { id:'q9', type:'open',
+        prompt:"Wrap-up: in your own words, summarize the two strongest pieces of evidence from this pedigree that prove Silver Static is dominant rather than recessive.",
+        reveal:"1) Every affected person has an affected parent — the trait never appears \"from nowhere\" in two unaffected parents, which recessive traits do all the time. 2) Two affected parents (Dez and Poppy) had an unaffected child (Ruell) — that's only possible if the trait is dominant, since two recessive-affected (ss × ss) parents could never produce an unaffected offspring."
+      }
+    ],
+    solved:{
+      verdict:"Silver Static is an AUTOSOMAL DOMINANT trait.",
+      evidence:[
+        "Every affected individual has an affected parent — the trait never skipped a generation on its own.",
+        "Two affected parents, Dez and Poppy, had an unaffected child (Ruell) — only possible if both were heterozygous (Ss) carriers of a dominant allele.",
+        "Punnett squares for Ss × ss and Ss × Ss matched the phenotype ratios actually observed in Generation III."
+      ]
+    }
+  }
+];
+
+/* ---------------------------------------------------------
+   STATE
+--------------------------------------------------------- */
+const state = {
+  screen:'landing', // landing | intro | tutorial | chart | solved | final
+  caseIndex:0,
+  qIndex:0,
+  answers:{}, // key -> {attempts, resolved, status, points}
+  inspected:null, // {id, source: 'tutorial'|'chart'}
+  score:0,
+  leaderboard:null, // fetched entries, cached
+  leaderboardName:'',
+  leaderboardSaved:false
+};
+
+const MAX_POINTS_PER_Q = 10;
+const HINT_PENALTY = 3;
+const MIN_POINTS = 2;
+
+function answerKey(scope, qid){ return scope+'_'+qid; }
+function getAnswerState(key){
+  if(!state.answers[key]) state.answers[key] = {attempts:0, resolved:false, status:null, openRevealed:false};
+  return state.answers[key];
+}
+
+/* ---------------------------------------------------------
+   PEDIGREE SVG BUILDER
+--------------------------------------------------------- */
+function buildPedigreeSVG(data){
+  const {individuals, unions, width, height} = data;
+  const findP = id => individuals.find(i=>i.id===id);
+  let lines = '';
+  unions.forEach(u=>{
+    const pA = findP(u.parents[0]), pB = findP(u.parents[1]);
+    const y = pA.y;
+    lines += `<line class="marriage-line" x1="${pA.x}" y1="${y}" x2="${pB.x}" y2="${y}"/>`;
+    const midX = (pA.x + pB.x)/2;
+    if(u.children && u.children.length){
+      const kids = u.children.map(findP);
+      const childY = kids[0].y;
+      const siblingY = y + (childY - y)/2;
+      const xs = kids.map(k=>k.x).concat([midX]);
+      const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+      lines += `<line class="drop-line" x1="${midX}" y1="${y}" x2="${midX}" y2="${siblingY}"/>`;
+      lines += `<line class="sibling-line" x1="${minX}" y1="${siblingY}" x2="${maxX}" y2="${siblingY}"/>`;
+      kids.forEach(k=>{
+        lines += `<line class="stem-line" x1="${k.x}" y1="${siblingY}" x2="${k.x}" y2="${k.y}"/>`;
+      });
+    }
+  });
+  let shapes = '';
+  individuals.forEach(p=>{
+    const cls = `person ${p.affected?'affected':'unaffected'} ${p.sex==='M'?'male':'female'}`;
+    const shape = p.sex==='M'
+      ? `<rect x="${p.x-22}" y="${p.y-22}" width="44" height="44"/>`
+      : `<circle cx="${p.x}" cy="${p.y}" r="24"/>`;
+    shapes += `<g class="${cls}" data-id="${p.id}" tabindex="0" role="button" aria-label="${p.name}, ${p.id}, ${p.sex==='M'?'male':'female'}, ${p.affected?'affected':'unaffected'}">
+      ${shape}
+      <text class="id-label" x="${p.x}" y="${p.y-32}" text-anchor="middle">${p.id}</text>
+      <text class="name-label" x="${p.x}" y="${p.y+42}" text-anchor="middle">${p.name}</text>
+    </g>`;
+  });
+  let genLabels = '';
+  (data.genLabels||[]).forEach(g=>{
+    genLabels += `<text class="gen-label" x="${data.genLabelX||14}" y="${g.y+5}">${g.roman}</text>`;
+  });
+  return `<svg viewBox="0 0 ${width} ${height}" class="pedigree-svg">
+    <g class="lines">${lines}</g>
+    <g class="gen-labels">${genLabels}</g>
+    <g class="shapes">${shapes}</g>
+  </svg>`;
+}
+
+/* ---------------------------------------------------------
+   RENDER HELPERS
+--------------------------------------------------------- */
+function esc(s){ return s; }
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------------------------------------------------
+   LEADERBOARD (shared persistent storage)
+--------------------------------------------------------- */
+async function loadLeaderboard(){
+  if(typeof window.storage === 'undefined'){
+    state.leaderboard = 'unavailable';
+    render();
+    return;
+  }
+  state.leaderboard = 'loading';
+  try{
+    const listRes = await window.storage.list('score:', true);
+    const keys = (listRes && listRes.keys) || [];
+    const entries = [];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r && r.value) entries.push(JSON.parse(r.value));
+      } catch(e){ /* skip unreadable entry */ }
+    }
+    entries.sort((a,b)=> (b.score||0) - (a.score||0));
+    state.leaderboard = entries;
+  } catch(e){
+    state.leaderboard = 'unavailable';
+  }
+  render();
+}
+
+async function saveScoreEntry(rawName){
+  if(typeof window.storage === 'undefined'){
+    state.leaderboardSaved = 'error';
+    render();
+    return;
+  }
+  const name = (rawName||'').trim().slice(0,30) || 'Anonymous Detective';
+  const safeKey = name.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40) || 'detective';
+  const key = `score:${safeKey}-${Date.now()}`;
+  const payload = JSON.stringify({ name, score: state.score, date: new Date().toISOString() });
+  try{
+    await window.storage.set(key, payload, true);
+    state.leaderboardSaved = true;
+    await loadLeaderboard();
+  } catch(e){
+    state.leaderboardSaved = 'error';
+    render();
+  }
+}
+
+function renderProgress(){
+  const badge = document.getElementById('scoreBadge');
+  if(badge) badge.textContent = `★ ${state.score} pts`;
+  const bar = document.getElementById('progressBar');
+  bar.innerHTML = CASES.map((c,i)=>{
+    let cls = 'tab';
+    if(i === state.caseIndex && state.screen!=='landing' && state.screen!=='final') cls += ' active';
+    const solvedKey = 'solvedFlag_'+c.id;
+    if(state.answers[solvedKey]) cls += ' done';
+    return `<div class="${cls}">${c.tabLabel}: ${c.tabName}</div>`;
+  }).join('');
+}
+
+function renderInspector(sourceData, containerId){
+  const insp = state.inspected;
+  let html = `<div class="inspector"><span class="label">Evidence Inspector</span>`;
+  if(!insp){
+    html += `<div class="name">Click on anyone in the chart to inspect them.</div>`;
+  } else {
+    const p = sourceData.individuals.find(x=>x.id===insp);
+    if(p){
+      html += `<div class="name">${p.name} &nbsp;<span style="color:var(--ink-soft); font-family:'Special Elite',monospace; font-size:0.75rem;">${p.id}</span></div>
+      <div>${p.sex==='M'?'Male':'Female'} &middot; ${p.affected? 'Affected (shows the trait)':'Unaffected'}</div>`;
+    }
+  }
+  html += `</div>`;
+  return html;
+}
+
+function currentQuestionList(){
+  if(state.screen==='tutorial') return TUTORIAL_QUESTIONS;
+  return CASES[state.caseIndex].questions;
+}
+function currentScope(){
+  if(state.screen==='tutorial') return 'tutorial';
+  return CASES[state.caseIndex].id;
+}
+function currentChartData(){
+  if(state.screen==='tutorial') return TUTORIAL_DIAGRAM;
+  return CASES[state.caseIndex].chart;
+}
+
+function renderQuestionBlock(){
+  const qlist = currentQuestionList();
+  const q = qlist[state.qIndex];
+  const scope = currentScope();
+  const key = answerKey(scope, q.id);
+  const st = getAnswerState(key);
+
+  let inner = `<p class="qprompt">${q.prompt}</p>`;
+
+  if(q.type==='mcq'){
+    inner += `<div class="options">`;
+    q.options.forEach((opt,idx)=>{
+      let cls = 'opt-btn';
+      let disabled = st.resolved ? 'disabled' : '';
+      if(st.resolved){
+        if(idx===q.correct) cls += ' correct';
+        else if(st.lastWrongIdx===idx) cls += ' wrong';
+      }
+      inner += `<button class="${cls}" ${disabled} data-optidx="${idx}">${opt}</button>`;
+    });
+    inner += `</div>`;
+  } else if(q.type==='click'){
+    inner += `<p class="click-hint">Click the correct person directly on the chart above.</p>`;
+  } else if(q.type==='open'){
+    if(!st.openRevealed){
+      inner += `<textarea class="open-answer" id="openAnswerInput" rows="3" placeholder="Type your answer here — this is just for you, we'll show the model answer when you're ready."></textarea>`;
+      inner += `<div class="nav-row" style="justify-content:flex-start;"><button class="secondary" id="revealOpenBtn">Reveal Model Answer</button></div>`;
+    } else if(!st.resolved){
+      inner += `<div class="feedback revealed"><span class="tag">Model Answer</span>${q.reveal}</div>`;
+      inner += `<p class="click-hint">Compare that to what you wrote — be honest with yourself.</p>`;
+      inner += `<div class="nav-row" style="justify-content:flex-start; gap:10px;">
+        <button class="primary" id="selfGradeYes">I nailed it</button>
+        <button class="secondary" id="selfGradeNo">I need to review this</button>
+      </div>`;
+    }
+  }
+
+  if(q.hints && q.hints.length && st.attempts > 0 && !st.resolved){
+    const shown = q.hints.slice(0, Math.min(st.attempts, q.hints.length));
+    if(shown.length){
+      inner += `<ul class="hints">` + shown.map(h=>`<li>${h}</li>`).join('') + `</ul>`;
+    }
+  }
+
+  if(st.resolved){
+    if(q.type==='open'){
+      const ptsTag = (scope!=='tutorial' && typeof st.points==='number' && st.points>0) ? `<span class="points-earned">+${st.points} pts</span>` : '';
+      if(st.status==='correct'){
+        inner += `<div class="feedback correct"><span class="tag">Marked Correct ${ptsTag}</span>Nice work — your reasoning matched up.</div>`;
+      } else {
+        inner += `<div class="feedback revealed"><span class="tag">Marked for Review</span>No worries — re-read the model answer above before moving on.</div>`;
+      }
+    } else if(st.status==='correct'){
+      const ptsTag = (scope!=='tutorial' && typeof st.points==='number') ? `<span class="points-earned">+${st.points} pts</span>` : '';
+      inner += `<div class="feedback correct"><span class="tag">Correct ${ptsTag}</span>${q.reveal}</div>`;
+    } else {
+      inner += `<div class="feedback revealed"><span class="tag">Here's what's going on</span>${q.reveal}</div>`;
+    }
+    const isLast = state.qIndex === qlist.length - 1;
+    inner += `<div class="nav-row"><button class="primary" id="nextQBtn">${isLast ? (state.screen==='tutorial' ? 'Open the Full Case File' : 'Close the Case') : 'Next Question'}</button></div>`;
+  }
+
+  return `<div class="qpanel">${inner}</div>`;
+}
+
+/* ---------------------------------------------------------
+   SCREEN RENDERERS
+--------------------------------------------------------- */
+function screenLanding(){
+  return `
+  <div class="landing-hero">
+    <h2>Genetics Detective Agency</h2>
+    <p>You've been hired to investigate four family traits. Each family has a pedigree chart full of clues. Read the chart carefully, answer the questions, and work out how each trait is inherited. Earn points for fast, hint-free deductions, then see how you stack up against other detectives.</p>
+  </div>
+  <div class="case-list">
+    ${CASES.map(c=>`<div class="item"><b>${c.tabLabel}</b>${c.tabName} — the ${c.trait} trait</div>`).join('')}
+  </div>
+  <div style="text-align:center;"><button class="primary" id="startBtn">Take the Case</button></div>
+  `;
+}
+
+function screenIntro(){
+  const c = CASES[state.caseIndex];
+  return `
+  <div class="card">
+    <h2>${c.intro.title}</h2>
+    ${c.intro.body.map(p=>`<p>${p}</p>`).join('')}
+    <div class="nav-row"><button class="primary" id="introBtn">${c.intro.cta}</button></div>
+  </div>
+  `;
+}
+
+function screenTutorial(){
+  const data = TUTORIAL_DIAGRAM;
+  return `
+  <div class="card">
+    <h2>Field Training: Reading the Symbols</h2>
+    <p>Before you can crack the Winters case, get comfortable reading a pedigree. Here's a small practice family.</p>
+  </div>
+  <div class="case-body">
+    <div class="case-left">
+      <div class="chart-wrap">${buildPedigreeSVG(data)}</div>
+      ${renderInspector(data)}
+    </div>
+    <div class="case-right">
+      ${renderQuestionBlock()}
+    </div>
+  </div>
+  `;
+}
+
+function screenChart(){
+  const c = CASES[state.caseIndex];
+  const data = c.chart;
+  return `
+  <div class="card">
+    <h2>${c.intro.title}: The Pedigree</h2>
+    <p>Study the chart. Click on anyone to inspect them, then work through the questions on the right.</p>
+  </div>
+  <div class="case-body">
+    <div class="case-left">
+      <div class="chart-wrap">${buildPedigreeSVG(data)}</div>
+      ${renderInspector(data)}
+    </div>
+    <div class="case-right">
+      ${renderQuestionBlock()}
+    </div>
+  </div>
+  `;
+}
+
+function screenSolved(){
+  const c = CASES[state.caseIndex];
+  const isLastCase = state.caseIndex === CASES.length - 1;
+  return `
+  <div class="card">
+    <div class="verdict-box">
+      <div class="stamp">Case Closed</div>
+      <div class="verdict-text"><strong>${c.solved.verdict}</strong></div>
+    </div>
+    <p>Evidence that cracked the case:</p>
+    <ul class="evidence-list">${c.solved.evidence.map(e=>`<li>${e}</li>`).join('')}</ul>
+    <div class="nav-row"><button class="primary" id="solvedNextBtn">${isLastCase ? 'Finish the Investigation' : 'Continue to Case '+(state.caseIndex+2)}</button></div>
+  </div>
+  `;
+}
+
+function screenFinal(){
+  let leaderboardHtml;
+  if(state.leaderboard === null || state.leaderboard === 'loading'){
+    leaderboardHtml = `<p class="leaderboard-note">Loading leaderboard…</p>`;
+  } else if(state.leaderboard === 'unavailable'){
+    leaderboardHtml = `<p class="leaderboard-note">The shared leaderboard isn't available right now, but your score above is still yours to keep.</p>`;
+  } else {
+    const rows = state.leaderboard.slice(0,15).map((e,i)=>
+      `<tr><td class="rank">#${i+1}</td><td>${escHtml(e.name)}</td><td>${e.score}</td></tr>`
+    ).join('');
+    leaderboardHtml = `
+      <table class="leaderboard">
+        <thead><tr><th>Rank</th><th>Detective</th><th>Points</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="3">No scores saved yet — be the first!</td></tr>'}</tbody>
+      </table>`;
+  }
+
+  const saveDisabled = state.leaderboardSaved === true ? 'disabled' : '';
+  const saveLabel = state.leaderboardSaved === true ? 'Saved ✓' : 'Save My Score';
+
+  return `
+  <div class="card">
+    <div class="verdict-box"><div class="stamp" style="border-color:var(--gold); color:var(--gold);">All Cases Closed</div></div>
+    <p>Four cases, four traits, one skill: reading the story hidden inside a pedigree chart. Here's your field reference before you head out.</p>
+  </div>
+  <div class="card">
+    <h2>Final Score</h2>
+    <div class="score-summary">
+      <div>Your total across all four cases</div>
+      <div class="big">★ ${state.score} pts</div>
+    </div>
+    <p>Save your score to the shared leaderboard to see how you compare with other detectives who've worked these cases.</p>
+    <div class="leaderboard-form">
+      <input type="text" id="leaderboardNameInput" placeholder="Enter your detective name" maxlength="30" value="${escHtml(state.leaderboardName)}">
+      <button class="primary" id="saveScoreBtn" ${saveDisabled}>${saveLabel}</button>
+    </div>
+    ${state.leaderboardSaved==='error' ? '<p class="leaderboard-note">Couldn\'t save just now — try again in a moment.</p>' : '<p class="leaderboard-note">Saving is optional. Your name and score become visible to anyone else using this activity.</p>'}
+    ${leaderboardHtml}
+  </div>
+  <div class="card">
+    <h2>Detective's Cheat Sheet</h2>
+    <div class="cheatsheet">
+      <div class="col">
+        <h4>Reading the chart</h4>
+        <ul>
+          <li>Square = male, Circle = female</li>
+          <li>Filled / colored = affected, unfilled = unaffected</li>
+          <li>Horizontal line = marriage/mating line, joining partners</li>
+          <li>Vertical line + sibling line = offspring line, joining parents to children</li>
+          <li>Roman numerals label generations, oldest at the top</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>Dominant vs. recessive clues</h4>
+        <ul>
+          <li><strong>Dominant:</strong> every affected person has an affected parent; the trait doesn't skip generations</li>
+          <li><strong>Recessive:</strong> two unaffected parents can have an affected child</li>
+          <li><strong>Recessive:</strong> the trait can vanish for generations, hidden in unaffected carriers, then reappear</li>
+          <li>Affecting males and females about equally suggests the gene is autosomal (not sex-linked)</li>
+          <li>A pedigree shows <strong>phenotype</strong> (filled/unfilled) directly — <strong>genotype</strong> (e.g. Ss vs. SS) usually has to be worked out from the phenotypes of someone's children</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  let html = '';
+  switch(state.screen){
+    case 'landing': html = screenLanding(); break;
+    case 'intro': html = screenIntro(); break;
+    case 'tutorial': html = screenTutorial(); break;
+    case 'chart': html = screenChart(); break;
+    case 'solved': html = screenSolved(); break;
+    case 'final': html = screenFinal(); break;
+  }
+  app.innerHTML = html;
+  renderProgress();
+  attachHandlers();
+}
+
+/* ---------------------------------------------------------
+   INTERACTION LOGIC
+--------------------------------------------------------- */
+function handleQuestionOutcome(scope, q, correctNow){
+  const key = answerKey(scope, q.id);
+  const st = getAnswerState(key);
+  // tutorial questions are practice and don't count toward the score
+  const scored = scope !== 'tutorial';
+  if(correctNow){
+    st.resolved = true;
+    st.status = 'correct';
+    if(scored){
+      const pts = Math.max(MAX_POINTS_PER_Q - st.attempts*HINT_PENALTY, MIN_POINTS);
+      st.points = pts;
+      state.score += pts;
+    }
+  } else {
+    st.attempts += 1;
+    if(st.attempts > q.hints.length){
+      st.resolved = true;
+      st.status = 'revealed';
+      st.points = 0;
+    }
+  }
+  render();
+  // scroll question panel into gentle view on mobile
+}
+
+function onOptionClick(idx){
+  const qlist = currentQuestionList();
+  const q = qlist[state.qIndex];
+  const scope = currentScope();
+  const key = answerKey(scope, q.id);
+  const st = getAnswerState(key);
+  if(st.resolved) return;
+  if(idx === q.correct){
+    handleQuestionOutcome(scope, q, true);
+  } else {
+    st.lastWrongIdx = idx;
+    handleQuestionOutcome(scope, q, false);
+  }
+}
+
+function onPersonClick(id){
+  state.inspected = id;
+  const qlist = currentQuestionList();
+  const q = qlist[state.qIndex];
+  if(q && q.type==='click'){
+    const scope = currentScope();
+    const key = answerKey(scope, q.id);
+    const st = getAnswerState(key);
+    if(!st.resolved){
+      if(id === q.expected){
+        handleQuestionOutcome(scope, q, true);
+        return;
+      } else {
+        handleQuestionOutcome(scope, q, false);
+        return;
+      }
+    }
+  }
+  render();
+}
+
+function onOpenReveal(){
+  const qlist = currentQuestionList();
+  const q = qlist[state.qIndex];
+  const scope = currentScope();
+  const key = answerKey(scope, q.id);
+  const st = getAnswerState(key);
+  st.openRevealed = true;
+  render();
+}
+
+function onOpenSelfGrade(gotItRight){
+  const qlist = currentQuestionList();
+  const q = qlist[state.qIndex];
+  const scope = currentScope();
+  const key = answerKey(scope, q.id);
+  const st = getAnswerState(key);
+  if(st.resolved) return;
+  st.resolved = true;
+  st.status = gotItRight ? 'correct' : 'review';
+  if(scope !== 'tutorial'){
+    st.points = gotItRight ? MAX_POINTS_PER_Q : 0;
+    if(gotItRight) state.score += MAX_POINTS_PER_Q;
+  }
+  render();
+}
+
+function advanceAfterQuestion(){
+  const qlist = currentQuestionList();
+  if(state.qIndex < qlist.length - 1){
+    state.qIndex += 1;
+    state.inspected = null;
+    render();
+  } else {
+    // finished this question set
+    if(state.screen === 'tutorial'){
+      state.screen = 'chart';
+      state.qIndex = 0;
+      state.inspected = null;
+    } else if(state.screen === 'chart'){
+      const c = CASES[state.caseIndex];
+      state.answers['solvedFlag_'+c.id] = true;
+      state.screen = 'solved';
+    }
+    render();
+  }
+}
+
+function attachHandlers(){
+  const startBtn = document.getElementById('startBtn');
+  if(startBtn) startBtn.addEventListener('click', ()=>{
+    state.caseIndex = 0; state.screen = 'intro'; state.qIndex = 0; render();
+  });
+
+  const introBtn = document.getElementById('introBtn');
+  if(introBtn) introBtn.addEventListener('click', ()=>{
+    const c = CASES[state.caseIndex];
+    state.screen = c.hasTutorial ? 'tutorial' : 'chart';
+    state.qIndex = 0;
+    state.inspected = null;
+    render();
+  });
+
+  const solvedNextBtn = document.getElementById('solvedNextBtn');
+  if(solvedNextBtn) solvedNextBtn.addEventListener('click', ()=>{
+    if(state.caseIndex < CASES.length - 1){
+      state.caseIndex += 1;
+      state.screen = 'intro';
+      state.qIndex = 0;
+      state.inspected = null;
+      render();
+    } else {
+      state.screen = 'final';
+      render();
+      loadLeaderboard();
+    }
+  });
+
+  const saveScoreBtn = document.getElementById('saveScoreBtn');
+  if(saveScoreBtn) saveScoreBtn.addEventListener('click', ()=>{
+    const input = document.getElementById('leaderboardNameInput');
+    const name = input ? input.value : '';
+    state.leaderboardName = name;
+    saveScoreEntry(name);
+  });
+
+  const nextQBtn = document.getElementById('nextQBtn');
+  if(nextQBtn) nextQBtn.addEventListener('click', advanceAfterQuestion);
+
+  document.querySelectorAll('.opt-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> onOptionClick(parseInt(btn.dataset.optidx,10)));
+  });
+
+  const revealOpenBtn = document.getElementById('revealOpenBtn');
+  if(revealOpenBtn) revealOpenBtn.addEventListener('click', onOpenReveal);
+  const selfGradeYes = document.getElementById('selfGradeYes');
+  if(selfGradeYes) selfGradeYes.addEventListener('click', ()=> onOpenSelfGrade(true));
+  const selfGradeNo = document.getElementById('selfGradeNo');
+  if(selfGradeNo) selfGradeNo.addEventListener('click', ()=> onOpenSelfGrade(false));
+
+  document.querySelectorAll('.pedigree-svg').forEach(svg=>{
+    svg.addEventListener('click', (e)=>{
+      const g = e.target.closest('[data-id]');
+      if(!g) return;
+      onPersonClick(g.getAttribute('data-id'));
+    });
+    svg.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){
+        const g = e.target.closest('[data-id]');
+        if(!g) return;
+        e.preventDefault();
+        onPersonClick(g.getAttribute('data-id'));
+      }
+    });
+  });
+}
+
+/* field notes drawer */
+document.getElementById('fieldNotesBtn').addEventListener('click', ()=>{
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerBackdrop').classList.add('open');
+});
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.remove('open');
+}
+document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+
+render();
+
+})();
+</script>
+</body>
+</html>
